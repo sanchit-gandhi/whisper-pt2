@@ -8,13 +8,13 @@ import torch
 from datasets import load_dataset
 from torch.utils.data import DataLoader
 from tqdm import tqdm
-from transformers import WhisperConfig, WhisperProcessor, WhisperForConditionalGeneration
+from transformers import WhisperConfig, WhisperProcessor
 
 from modeling_whisper_bnb import WhisperBnbForConditionalGeneration
 from modeling_whisper_bnb_attn import WhisperBnbFlashAttnForConditionalGeneration
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Benchmark a Whisper model with Flash Attention and Torch compile.")
+    parser = argparse.ArgumentParser(description="Benchmark a Whisper model with bnb 8-bit quantization and Flash Attention.")
     parser.add_argument(
         "--batch_size",
         type=int,

@@ -34,7 +34,7 @@ def parse_args():
     )
     parser.add_argument(
         "--use_flash_attn",
-        action="store_false",
+        action="store_true",
         help="Whether to use Flash Attention.",
     )
     parser.add_argument(
@@ -116,7 +116,7 @@ def main():
     vram_results = {checkpoint: [] for checkpoint in whisper_checkpoints}
 
     # evaluate on the largest model first so that an OOM happens sooner rather than later
-    for checkpoint in whisper_checkpoints[::-1]:
+    for checkpoint in whisper_checkpoints:
         print(10 * "=", checkpoint, 10 * "=")
         checkpoint_id = f"openai/whisper-{checkpoint}"
         config = WhisperConfig.from_pretrained(checkpoint_id)

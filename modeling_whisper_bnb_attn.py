@@ -1269,7 +1269,7 @@ class WhisperModel(WhisperPreTrainedModel):
     WHISPER_START_DOCSTRING,
 )
 # Copied from transformers.models.whisper.modeling_whisper.WhisperForConditionalGeneration with nn.Linear->bnb.nn.Linear8bitLt
-class WhisperBnbForConditionalGeneration(WhisperPreTrainedModel):
+class WhisperBnbFlashAttnForConditionalGeneration(WhisperPreTrainedModel):
     base_model_prefix = "model"
     _keys_to_ignore_on_load_missing = [
         r"encoder.version",

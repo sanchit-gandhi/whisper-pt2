@@ -259,10 +259,10 @@ class WhisperAttention(nn.Module):
         self.scaling = self.head_dim**-0.5
         self.is_decoder = is_decoder
 
-        self.k_proj = bnb.nn.Linear8bitLt(embed_dim, embed_dim, bias=False)
-        self.v_proj = bnb.nn.Linear8bitLt(embed_dim, embed_dim, bias=bias)
-        self.q_proj = bnb.nn.Linear8bitLt(embed_dim, embed_dim, bias=bias)
-        self.out_proj = bnb.nn.Linear8bitLt(embed_dim, embed_dim, bias=bias)
+        self.k_proj = bnb.nn.Linear8bitLt(embed_dim, embed_dim, bias=False, has_fp16_weights=False, threshold=0.0)
+        self.v_proj = bnb.nn.Linear8bitLt(embed_dim, embed_dim, bias=bias, has_fp16_weights=False, threshold=0.0)
+        self.q_proj = bnb.nn.Linear8bitLt(embed_dim, embed_dim, bias=bias, has_fp16_weights=False, threshold=0.0)
+        self.out_proj = bnb.nn.Linear8bitLt(embed_dim, embed_dim, bias=bias, has_fp16_weights=False, threshold=0.0)
 
     def _shape(self, tensor: torch.Tensor, seq_len: int, bsz: int):
         return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).transpose(1, 2).contiguous()
@@ -402,8 +402,8 @@ class WhisperEncoderLayer(nn.Module):
         self.dropout = config.dropout
         self.activation_fn = ACT2FN[config.activation_function]
         self.activation_dropout = config.activation_dropout
-        self.fc1 = bnb.nn.Linear8bitLt(self.embed_dim, config.encoder_ffn_dim)
-        self.fc2 = bnb.nn.Linear8bitLt(config.encoder_ffn_dim, self.embed_dim)
+        self.fc1 = bnb.nn.Linear8bitLt(self.embed_dim, config.encoder_ffn_dim, has_fp16_weights=False, threshold=0.0)
+        self.fc2 = bnb.nn.Linear8bitLt(config.encoder_ffn_dim, self.embed_dim, has_fp16_weights=False, threshold=0.0)
         self.final_layer_norm = nn.LayerNorm(self.embed_dim)
 
     def forward(
@@ -481,8 +481,8 @@ class WhisperDecoderLayer(nn.Module):
             is_decoder=True,
         )
         self.encoder_attn_layer_norm = nn.LayerNorm(self.embed_dim)
-        self.fc1 = bnb.nn.Linear8bitLt(self.embed_dim, config.decoder_ffn_dim)
-        self.fc2 = bnb.nn.Linear8bitLt(config.decoder_ffn_dim, self.embed_dim)
+        self.fc1 = bnb.nn.Linear8bitLt(self.embed_dim, config.decoder_ffn_dim, has_fp16_weights=False, threshold=0.0)
+        self.fc2 = bnb.nn.Linear8bitLt(config.decoder_ffn_dim, self.embed_dim, has_fp16_weights=False, threshold=0.0)
         self.final_layer_norm = nn.LayerNorm(self.embed_dim)
 
     def forward(
@@ -1321,7 +1321,8 @@ class WhisperBnbForConditionalGeneration(WhisperPreTrainedModel):
     def __init__(self, config: WhisperConfig):
         super().__init__(config)
         self.model = WhisperModel(config)
-        self.proj_out = bnb.nn.Linear8bitLt(config.d_model, config.vocab_size, bias=False)
+        #self.proj_out = bnb.nn.Linear8bitLt(config.d_model, config.vocab_size, bias=False)
+        self.proj_out = nn.Linear(config.d_model, config.vocab_size, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()

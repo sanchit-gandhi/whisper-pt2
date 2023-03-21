@@ -122,45 +122,49 @@ def main():
         config = WhisperConfig.from_pretrained(checkpoint_id)
 
         if checkpoint == "large-v2":
-            layer_increments = [2, 4, 6, 8, 16, 32]
+            layer_increments = [1, 2, 4, 6, 8, 16, 32]
         elif checkpoint == "medium.en":
-            layer_increments = [2, 4, 6, 8, 16, 24]
+            layer_increments = [1, 2, 4, 6, 8, 16, 24]
         else:
             total_decoder_layers = config.decoder_layers
             layer_increments = np.arange(2, total_decoder_layers + 2, 2)
+            layer_increments = np.insert(layer_increments, 0, 1)
 
         layer_increments = layer_increments[::-1]
 
-        for decoder_layers in layer_increments:
-            print("Layers: ", decoder_layers)
-            config.decoder_layers = int(decoder_layers)
-            model = whisper_cls(config)
-            model.to("cuda").half()
+        for idx, encoder_layers in enumerate(layer_increments):
+            config.encoder_layers = int(encoder_layers)
+            print("Encoder layers: ", encoder_layers)
+            for decoder_layers in layer_increments[idx:]:
+                print("Decoder layers: ", decoder_layers)
+                config.decoder_layers = int(decoder_layers)
+                model = whisper_cls(config)
+                model.to("cuda").half()
 
-            generate_fn = torch.compile(model.generate) if args.use_torch_compile else model.generate
-            # Do a dummy compilation step if required - we want to exclude this from the benchmark
-            if args.use_torch_compile:
-                batch = next(iter(dataloader))
-                input_features = batch["input_features"].to("cuda").half()
-                pred_ids = generate_fn(
-                    input_features, max_new_tokens=args.generated_tokens, min_new_tokens=args.generated_tokens
-                )
+                generate_fn = torch.compile(model.generate) if args.use_torch_compile else model.generate
+                # Do a dummy compilation step if required - we want to exclude this from the benchmark
+                if args.use_torch_compile:
+                    batch = next(iter(dataloader))
+                    input_features = batch["input_features"].to("cuda").half()
+                    pred_ids = generate_fn(
+                        input_features, max_new_tokens=args.generated_tokens, min_new_tokens=args.generated_tokens
+                    )
 
-            start = time.time()
-            for batch in tqdm(dataloader):
-                input_features = batch["input_features"].to("cuda").half()
-                pred_ids = generate_fn(
-                    input_features, max_new_tokens=args.generated_tokens, min_new_tokens=args.generated_tokens
-                )
-            runtime = time.time() - start
+                start = time.time()
+                for batch in tqdm(dataloader):
+                    input_features = batch["input_features"].to("cuda").half()
+                    pred_ids = generate_fn(
+                        input_features, max_new_tokens=args.generated_tokens, min_new_tokens=args.generated_tokens
+                    )
+                runtime = time.time() - start
 
-            decoder_layer_results[checkpoint].append(int(decoder_layers))
-            runtime_results[checkpoint].append(runtime)
-            param_results[checkpoint].append(model.num_parameters() / 10**6)
-            vram_results[checkpoint].append(get_gpu_memory()[0])
+                decoder_layer_results[checkpoint].append(f"{int(encoder_layers)}-{int(decoder_layers)}")
+                runtime_results[checkpoint].append(runtime)
+                param_results[checkpoint].append(model.num_parameters() / 10**6)
+                vram_results[checkpoint].append(get_gpu_memory()[0])
 
-            del model
-            torch.cuda.empty_cache()
+                del model
+                torch.cuda.empty_cache()
 
     # Save the results
     compression_results = {}
@@ -172,7 +176,7 @@ def main():
         ]
 
     # Save the results
-    headers = ["Checkpoint", "Dec layers", "Params / M", "Compression / %", "VRAM / GB", "Runtime / s"]
+    headers = ["Checkpoint", "Layers", "Params / M", "Compression / %", "VRAM / GB", "Runtime / s"]
     with open(args.output_csv_file, "w", encoding="UTF8") as f:
         writer = csv.writer(f)
         # write the headers

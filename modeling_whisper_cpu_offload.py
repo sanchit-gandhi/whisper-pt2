@@ -1411,6 +1411,7 @@ class WhisperCPUOffloadForConditionalGeneration(WhisperPreTrainedModel):
             reordered_past += (tuple(past_state.index_select(0, beam_idx) for past_state in layer_past),)
         return reordered_past
 
+    # Adapted from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion.StableDiffusionPipeline.enable_model_cpu_offload
     def enable_model_cpu_offload(self, gpu_id=0):
         r"""
         Offloads all models to CPU using accelerate, reducing memory usage with a low impact on performance. Compared
@@ -1426,7 +1427,7 @@ class WhisperCPUOffloadForConditionalGeneration(WhisperPreTrainedModel):
         device = torch.device(f"cuda:{gpu_id}")
 
         if self.device.type != "cpu":
-            self.to("cpu", silence_dtype_warnings=True)
+            self.to("cpu")
             torch.cuda.empty_cache()  # otherwise we don't see the memory savings (but they probably exist)
 
         hook = None
